@@ -1,39 +1,63 @@
 # Kubernetes ZooKeeper
 This project contains a Docker image meant to facilitate the deployment of 
-[Apache ZooKeeper](https://zookeeper.apache.org/) on [Kubernetes](http://kubernetes.io/) using 
+[Apache ZooKeeper](https://zookeeper.apache.org/) on 
+[Kubernetes](http://kubernetes.io/) using 
 [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). 
+It requires Kubernetes 1.7 or greater.
+
 ##Limitations
-1. Scaling is not currently supported. An ensemble's membership can not be updated in a safe way 
-in ZooKeeper 3.4.9 (The current stable release).
-2. Observers are currently not supported. Contributions are welcome.
-3. Persistent Volumes must be used. emptyDirs will likely result in a loss of data.
+
+1. Scaling is not currently supported. An ensemble's membership can not be 
+updated in a safe way in ZooKeeper 3.4.9 (The current stable release).
+1. Observers are currently not supported. Contributions are welcome.
+1. Persistent Volumes must be used. emptyDirs will likely result in a loss of 
+data.
 
 ## Docker Image
-The docker image contained in this repository is comprised of a base Ubuntu 16.04 image using the latest
-release of the OpenJDK JRE based on the 1.8 JVM (JDK 8u111) and the latest stable release of 
-ZooKeeper, 3.4.9. Ubuntu is a much larger image than BusyBox or Alpine, but these images contain 
-mucl or ulibc. This requires a custom version of OpenJDK to be built against a libc runtime other 
-than glibc. No vendor of the ZooKeeper software supplies or verifies the software against such a 
-JVM, and, while Alpine or BusyBox would provide smaller images, we have prioritized a well known 
-environment.
+The docker image contained in this repository is comprised of a base 
+Ubuntu 16.04 image using the latest release of the OpenJDK JRE based on the 
+1.8 JVM and the latest stable release of ZooKeeper, 3.4.9. Ubuntu is a much 
+larger image than BusyBox or Alpine, but these images contain mucl or ulibc. 
+This requires a custom version of OpenJDK to be built against a libc runtime 
+other than glibc. No vendor of the ZooKeeper software supplies or verifies the 
+software against such a JVM, and, while Alpine or BusyBox would provide smaller 
+images, we have prioritized a well known environment.
 
-The image is built such that the ZooKeeper process is designated to run as a non-root user. By default, 
-this user is zookeeper. The ZooKeeper package is installed into the /opt/zookeeper directory, all 
-configuration is sym linked into the /usr/etc/zookeeper/, and all executables are sym linked into 
-/usr/bin. The ZooKeeper data directories are contained in /var/lib/zookeeper. This is identical to 
-the RPM distribution that users should be familiar with.
-## Configuration
+The image is built such that the ZooKeeper process is designated to run as a 
+non-root user. By default, this user is zookeeper. The ZooKeeper package is 
+installed into the /opt/zookeeper directory, all configuration is sym linked 
+into the /usr/etc/zookeeper/, and all executables are sym linked into 
+/usr/bin. The ZooKeeper data directories are contained in /var/lib/zookeeper. 
+This is identical to the RPM distribution that users should be familiar with.
+
+## Makefile 
+The makefile contained in this directory has three commands.
+- The `build` command will build the Docker image locally.
+- The `push` command will push the image, provided you have correct permissions, 
+to grc.io/samples repository.
+- The `all` command will perform the `build` command.
+
+The scripts directory contains useful utilities for managing the ZooKeeper 
+process in a Kubernetes cluster. 
+
+## Components
+
+The zookeeper.yaml manifest, in the manifests directory, contains a 
+Headless Service, a Service for client connections, a PodDisruptionBudget to 
+manage planned disruptions, and a StatefulSet that deploys a ZooKeeper ensemble.
 
 ### Headless Service
-The ZooKeeper Stateful Set requires a Headless Service to control the network domain for the 
-ZooKeeper processes. An example configuration is provided below.
+
+The ZooKeeper StatefulSet requires a Headless Service to control the network 
+domain for the ensemble. An example configuration is provided below.
+
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: zk-svc
+  name: zk-hs
   labels:
-    app: zk-svc
+    app: zk-hs
 spec:
   ports:
   - port: 2888
@@ -42,18 +66,69 @@ spec:
     name: leader-election
   clusterIP: None
   selector:
-    app: zk-svc
+    app: zk
 ```
-Note that the Service contains two ports. The server port is used for followers to tail the leaders
-even log, and the leader-election port is used by the ensemble to perform leader election.
+
+Note that the Service contains two ports. The server port is used for followers 
+to tail the leader's event log, and the leader-election port is used by the 
+ensemble to perform leader election.
+
+### Client Service
+
+A service should be configured for clients to connect to members of the 
+ensemble that are Running and Ready. An example configuration is below.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: zk-cs
+  labels:
+    app: zk
+spec:
+  ports:
+  - port: 2181
+    name: client
+  selector:
+    app: zk
+```
+
+The service contains one port for clients to connect to. When clients connect 
+through this service they will be load balanced to an Running and Ready 
+ZooKeeper server.
+
+## PodDisruptionBudget
+
+A PodDisruptionBudget is specified to ensure that drains and evictions respect 
+the quorum size of the ensemble. The budget below indicates that the ensemble 
+can tolerate at most 1 planned disruption. You should always set the PDB's 
+`maxUnavailable` to 1 for ZooKeeper.
+
+```yaml
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: zk-pdb
+spec:
+  selector:
+    matchLabels:
+      app: zk
+  maxUnavailable: 1
+```
 
 ### Stateful Set
-The Stateful Set configuration must match the Headless Service, and it must provide the number of 
-replicas. In the example below we request a ZooKeeper ensemble of size 3. 
-**As weighted quorums are not supported, it is imperative that an odd number of replicas be chosen.
-Moreover, the number of replicas should be either 1, 3, 5, or 7. Ensembles may be scaled to larger 
-membership for read fan out, but, as this will adversely impact write performance, careful thought
-should be given to selecting a larger value.**
+
+The Stateful Set configuration must match the Headless Service, and it must 
+provide the number of replicas. In the example below we request a ZooKeeper 
+ensemble of size 3. **As weighted quorums are not supported, it is imperative 
+that an odd number of replicas be chosen.Moreover, the number of replicas 
+should be either 1, 3, 5, or 7. Ensembles may be scaled to larger membership 
+for read fan out, but, as this will adversely impact write performance, 
+careful thought should be given to selecting a larger value.** The selected 
+`updateStrategy` is `RollingUpdate`. In this mode, if the manifest is updated 
+(e.g. via `kubectl apply`), the StatefulSet controller will perform a rolling 
+update of all Pods to apply the new configuration.
+
 ```yaml
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -62,112 +137,133 @@ metadata:
 spec:
   serviceName: zk-headless
   replicas: 3
+  updateStrategy: 
+    type: RollingUpdate
 ```
-### Container Configuration
-The zkGenConfig.sh script will generate the ZooKeeper configuration (zoo.cfg), Log4J configuration
-(log4j.properties), and JVM configuration (jvm.env). These will be written to the 
-/opt/zookeeper/conf directory with correct read permissions for the zookeeper user. These files are 
-generated from environment variables that are injected into the container as in the example, minimal 
-configuration below.
+#### Container Configuration
+
+The start-zookeeer script will generate the ZooKeeper configuration (zoo.cfg), 
+Log4J configuration (log4j.properties), and JVM configuration (jvm.env). These 
+will be written to the /opt/zookeeper/conf directory with correct read 
+permissions for the zookeeper user. These files are generated from command line 
+parameters to the script. The containerPorts must correspond to the port 
+parameters supplied to the script and the Service's above.
+
 ```yaml
 containers:
-      - name: k8szk
-        imagePullPolicy: Always
-        image: gcr.io/google_samples/k8szk:v1
-        ports:
-        - containerPort: 2181
-          name: client
-        - containerPort: 2888
-          name: server
-        - containerPort: 3888
-          name: leader-election
-        env:
-        - name : ZK_ENSEMBLE
-          value: "zk-0;zk-1;zk-2"
-        - name: ZK_CLIENT_PORT
-          value: "2181"
-        - name: ZK_SERVER_PORT
-          value: "2888"
-        - name: ZK_ELECTION_PORT
-          value: "3888"
+- name: kubernetes-zookeeper
+  imagePullPolicy: Always
+  image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.9"
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+  ports:
+  - containerPort: 2181
+    name: client
+  - containerPort: 2888
+    name: server
+  - containerPort: 3888
+    name: leader-election
+  command:
+  - sh
+  - -c
+  - "start-zookeeper \
+    --servers=3 \
+    --data_dir=/var/lib/zookeeper/data \
+    --data_log_dir=/var/lib/zookeeper/data/log \
+    --conf_dir=/opt/zookeeper/conf \
+    --client_port=2181 \
+    --election_port=3888 \
+    --server_port=2888 \
+    --tick_time=2000 \
+    --init_limit=10 \
+    --sync_limit=5 \
+    --heap=1024M \
+    --max_client_cnxns=60 \
+    --snap_retain_count=3 \
+    --purge_interval=12 \
+    --max_session_timeout=40000 \
+    --min_session_timeout=4000 \
+    --log_level=INFO"
 ```
-#### Membership Configuration
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:---------|
-|ZK_ENSEMBLE|string|N/A|A colon separated list of servers in the ensemble.|
-This is a mandatory configuration variable that is used to configure the membership of the 
-ZooKeeper ensemble. It is also used to prevent data loss during accidental scale operations. The 
-set can be computed as as follows. For all integers in the range [0,replicas), prepend the name of 
-service followed by a dash to the integer. So for the Stateful Set above, the name is zk and we have
-3 replicas. for the set {0,1,2} we prepend zk- giving us zk-0;zk-1;zk-2.
 
-#### Network Configuration
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:--------|
-|ZK_CLIENT_PORT|integer|2181|The port on which the server will accept client requests.|
-|ZK_SERVER_PORT|integer|2888|The port on which the leader will send events to followers.|
-|ZK_ELECTION_PORT|integer|3888|The port on which the ensemble performs leader election.|
-|ZK_MAX_CLIENT_CNXNS|integer|60|The maximum number of concurrent client connections that a server in the ensemble will accept.|
+##### Parameters
+    --servers           The number of servers in the ensemble. The default 
+                        value is 1. This must be set to 
+                        `StatefulSet.Spec.Replicas`.
 
-The ZK_CLIENT_PORT, ZK_ELECTION_PORT, and ZK_SERVERS_PORT must be set to the containerPorts 
-specified in the container configuration, and the ZK_SERVER_PORT and ZK_ELECTION_PORT 
-must match the Headless Service configuration. However, if the default values of 
-the environment variables are used for both the containerPorts and the Headless Service, the 
-environment variables may be omitted from the configuration.
+    --data_dir          The directory where the ZooKeeper process will store its
+                        snapshots. The default is /var/lib/zookeeper/data. This 
+                        directory must be backed by a persistent volume.
 
-#### ZooKeeper Time Configuration
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:--------|
-|ZK_TICK_TIME|integer|2000|The number of wall clock ms that corresponds to a Tick for the ensembles internal time.|
-|ZK_INIT_LIMIT|integer|5|The number of Ticks that an ensemble member is allowed to perform leader election.|
-|ZK_SYNC_LIMIT|integer|10|The number of Tick by which a follower may lag behind the ensembles leader.|
+    --data_log_dir      The directory where the ZooKeeper process will store its 
+                        write ahead log. The default is 
+                        /var/lib/zookeeper/data/log. This directory must be 
+                        backed by a persistent volume.
 
-#### ZooKeeper Session Configuration
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:--------|
-|ZK_MIN_SESSION_TIMEOUT|integer|2 * ZK_TICK_TIME|The minimum session timeout that the ensemble will allow a client to request.|
-|ZK_MAX_SESSION_TIMEOUT|integer|20 * ZK_TICK_TIME|The maximum session timeout that the ensemble will allows a client to request.|
+    --conf_dir          The directoyr where the ZooKeeper process will store its
+                        configuration. The default is /opt/zookeeper/conf.
 
-#### Data Retention Configuration
-**ZooKeeper does not, by default, purge old transactions logs or snapshots. This can cause 
-the disk to become full.** If you have backup procedures and retention policies that rely on 
-external systems, the snapshots can be retrieved manually from the /var/lib/zookeeper/data directory,
-and the logs can be retrieved manually from the /var/lib/zookeeper/log directory.
-These will be stored on the persistent volume. The zkCleanup.sh script can be used to manually purge
-outdated logs and snapshots.
+    --client_port       The port on which the ZooKeeper process will listen for 
+                        client requests. The default is 2181. This port must be 
+                        specified in both containerPorts and in the Client 
+                        Service.
 
-If you do not have an existing retention policy and backup procedure, and if you are comfortable with 
-an automatic procedure, you can use the environment variables below to enable and configure 
-automatic data purge policies.
+    --election_port     The port on which the ZooKeeper process will perform 
+                        leader election. The default is 3888.
 
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:---------|
-|ZK_SNAP_RETAIN_COUNT|integer|3|The number of snapshots that the ZooKeeper process will retain if ZK_PURGE_INTERVAL is set to a value greater than 0.|
-|ZK_PURGE_INTERVAL|integer|0|The delay, in hours, between ZooKeeper log and snapshot cleanups.|
+    --server_port       The port on which the ZooKeeper process will listen for 
+                        requests from other servers in the ensemble. The 
+                        default is 2888. 
 
-#### JVM Configuration
-Currently the only supported JVM configuration is the JVM heap size. Be sure that the heap size you
-request does not cause the process to swap out.
+    --tick_time         The length of a ZooKeeper tick in ms. The default is 
+                        2000.
 
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:--------|
-|ZK_HEAP_SIZE|integer|2|The JVM heap size in Gibibytes.|
+    --init_limit        The number of Ticks that an ensemble member is allowed 
+                        to perform leader election. The default is 10.
 
-#### Log Level Configuration
-|Variable|Type|Default|Description|
-|:------:|:---:|:-----:|:--------|
-|ZK_LOG_LEVEL|enum(TRACE,DEBUG,INFO,WARN,ERROR,FATAL)|INFO|The Log Level that for the ZooKeeper processes logger.|
+    --sync_limit        The maximum session timeout that the ensemble will 
+                        allows a client to request. The default is 5.
+
+    --heap              The maximum amount of heap to use. The format is the 
+                        same as that used for the Xmx and Xms parameters to the 
+                        JVM. e.g. --heap=2G. The default is 2G.
+
+    --max_client_cnxns  The maximum number of client connections that the 
+                        ZooKeeper process will accept simultaneously. The 
+                        default is 60.
+
+    --snap_retain_count The maximum number of snapshots the ZooKeeper process 
+                        will retain if purge_interval is greater than 0. The 
+                        default is 3.
+
+    --purge_interval    The number of hours the ZooKeeper process will wait 
+                        between purging its old snapshots. If set to 0 old 
+                        snapshots will never be purged. The default is 0.
+
+    --max_session_timeout The maximum time in milliseconds for a client session 
+                        timeout. The default value is 2 * tick time.
+
+    --min_session_timeout The minimum time in milliseconds for a client session 
+                        timeout. The default value is 20 * tick time.
+
+    --log_level         The log level for the zookeeeper server. Either FATAL,
+                        ERROR, WARN, INFO, DEBUG. The default is INFO.
 
 #### Liveness and Readiness
-The zkOk.sh script can be used to check the liveness and readiness of ZooKeeper process. The example 
-below demonstrates how to configure liveness and readiness probes for the Pods in the Stateful Set.
+
+The zookeeper-ready script can be used to check the liveness and readiness of 
+ZooKeeper process. The example below demonstrates how to configure liveness and 
+readiness probes for the Pods in the Stateful Set.
+
 ```yaml
   readinessProbe:
     exec:
       command:
       - sh
       - -c
-      - "zkOk.sh"
+      - "zookeeper-ready 2181"
     initialDelaySeconds: 15 
     timeoutSeconds: 5
   livenessProbe:
@@ -175,27 +271,31 @@ below demonstrates how to configure liveness and readiness probes for the Pods i
       command:
       - sh
       - -c
-      - "zkOk.sh"
+      - "zookeeper-ready 2181"
     initialDelaySeconds: 15
     timeoutSeconds: 5
 ```
 #### Volume Mounts
+
 volumeMounts for the container should be defined as below.
+
 ```yaml
   volumeMounts:
   - name: datadir
     mountPath: /var/lib/zookeeper
 ```
-### Storage Configuration
-Currently, the use of Persistent Volumes to provide durable, network attached storage is mandatory.
-**If you use the provided image with emptyDirs, you will likely suffer a data loss.** The example 
-below demonstrates how to request a dynamically provisioned persistent volume of 20 GiB.
+
+#### Storage Configuration
+
+Currently, the use of Persistent Volumes to provide durable, network attached 
+storage is mandatory. **If you use the provided image with emptyDirs, you will 
+likely suffer a data loss.** The example below demonstrates how to request a 
+dynamically provisioned persistent volume of 20 GiB.
+
 ```yaml
   volumeClaimTemplates:
-  - metadata:
+    - metadata:
       name: datadir
-      annotations:
-        volume.alpha.kubernetes.io/storage-class: anything
     spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
@@ -203,19 +303,42 @@ below demonstrates how to request a dynamically provisioned persistent volume of
           storage: 20Gi
 ```
 
-### Logging 
-The Log Level configuration may be modified via the ZK_LOG_LEVEL environment variable as described 
-above. However, the location of the log output is not modifiable. The ZooKeeper process must be 
-run in the foreground, and the log information will be shipped to the stdout. This is considered 
-to be a best practice for containerized applications, and it allows users to make use of the 
-log rotation and retention infrastructure that already exists for K8s.
+#### Pod Anti-Affinity
 
-### Metrics 
-The zkMetrics script can be used to retrieve metrics from the ZooKeeper process and print them to 
-stdout. A recurring Kubernetes job can be used to collect these metrics and provide them to a 
-collector.
+An anti-affinity rule is specified to ensure that the ZooKeeper servers are 
+spread across nodes in the Kubernetes cluster. This makes the ensemble 
+resiliant to node failures.
+
+```yaml
+affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: "app"
+                operator: In
+                values: 
+                - zk
+          topologyKey: "kubernetes.io/hostname"
+```
+
+## Logging 
+
+The Log Level configuration may be modified via the log_level flag as described 
+above. However, the location of the log output is not modifiable. The ZooKeeper 
+process must be run in the foreground, and the log information will be shipped 
+to the stdout. This is considered to be a best practice for containerized 
+applications, and it allows users to make use of the log rotation and retention 
+infrastructure that already exists for K8s.
+
+## Metrics 
+
+The zookeeper-metrics script can be used to retrieve metrics from the ZooKeeper 
+process and print them to stdout. A recurring Kubernetes job can be used to 
+collect these metrics and provide them to a collector.
+
 ```bash
-bash$ kubectl exec zk-0 zkMetrics.sh
+bash$ kubectl exec zk-0 zookeeper-metrics
 zk_version	3.4.9-1757313, built on 08/23/2016 06:50 GMT
 zk_avg_latency	0
 zk_max_latency	0

@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: zk-svc
+  name: zk-hs
   labels:
-    app: zk-svc
+    app: zk
 spec:
   ports:
   - port: 2888
@@ -16,17 +16,17 @@ spec:
     app: zk
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Service
 metadata:
-  name: zk-cm
-data:
-  jvm.heap: "1G"
-  tick: "2000"
-  init: "10"
-  sync: "5"
-  client.cnxns: "60"
-  snap.retain: "3"
-  purge.interval: "0"
+  name: zk-cs
+  labels:
+    app: zk
+spec:
+  ports:
+  - port: 2181
+    name: client
+  selector:
+    app: zk
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -36,15 +36,18 @@ spec:
   selector:
     matchLabels:
       app: zk
-  minAvailable: 2
+  maxUnavailable: 1
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
   name: zk
 spec:
-  serviceName: zk-svc
+  serviceName: zk-hs
   replicas: 3
+  podManagementPolicy: Parallel
+  updateStrategy: 
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -61,9 +64,9 @@ spec:
                     - zk
               topologyKey: "kubernetes.io/hostname"
       containers:
-      - name: k8szk
+      - name: kubernetes-zookeeper
         imagePullPolicy: Always
-        image: gcr.io/google_samples/k8szk:v2
+        image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.9"
         resources:
           requests:
             memory: "2Gi"
@@ -75,64 +78,41 @@ spec:
           name: server
         - containerPort: 3888
           name: leader-election
-        env:
-        - name : ZK_REPLICAS
-          value: "3"
-        - name : ZK_HEAP_SIZE
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: jvm.heap
-        - name : ZK_TICK_TIME
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: tick
-        - name : ZK_INIT_LIMIT
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: init
-        - name : ZK_SYNC_LIMIT
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: tick
-        - name : ZK_MAX_CLIENT_CNXNS
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: client.cnxns
-        - name: ZK_SNAP_RETAIN_COUNT
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: snap.retain
-        - name: ZK_PURGE_INTERVAL
-          valueFrom:
-            configMapKeyRef:
-                name: zk-cm
-                key: purge.interval
-        - name: ZK_CLIENT_PORT
-          value: "2181"
-        - name: ZK_SERVER_PORT
-          value: "2888"
-        - name: ZK_ELECTION_PORT
-          value: "3888"
         command:
         - sh
         - -c
-        - zkGenConfig.sh && zkServer.sh start-foreground
+        - "start-zookeeper \
+          --servers=3 \
+          --data_dir=/var/lib/zookeeper/data \
+          --data_log_dir=/var/lib/zookeeper/data/log \
+          --conf_dir=/opt/zookeeper/conf \
+          --client_port=2181 \
+          --election_port=3888 \
+          --server_port=2888 \
+          --tick_time=2000 \
+          --init_limit=10 \
+          --sync_limit=5 \
+          --heap=1024M \
+          --max_client_cnxns=60 \
+          --snap_retain_count=3 \
+          --purge_interval=12 \
+          --max_session_timeout=40000 \
+          --min_session_timeout=4000 \
+          --log_level=INFO"
         readinessProbe:
           exec:
             command:
-            - "zkOk.sh"
+            - sh
+            - -c
+            - "zookeeper-ready 2181"
           initialDelaySeconds: 10
           timeoutSeconds: 5
         livenessProbe:
           exec:
             command:
-            - "zkOk.sh"
+            - sh
+            - -c
+            - "zookeeper-ready 2181"
           initialDelaySeconds: 10
           timeoutSeconds: 5
         volumeMounts:
