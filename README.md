@@ -9,7 +9,7 @@ It requires Kubernetes 1.7 or greater.
 ## Limitations
 
 1. Scaling is not currently supported. An ensemble's membership can not be 
-updated in a safe way in ZooKeeper 3.4.9 (The current stable release).
+updated in a safe way in ZooKeeper 3.4.10 (The current stable release).
 1. Observers are currently not supported. Contributions are welcome.
 1. Persistent Volumes must be used. emptyDirs will likely result in a loss of 
 data.
@@ -96,7 +96,7 @@ and Ready before updating the next Pod.
 ```yaml
  name: kubernetes-zookeeper
         imagePullPolicy: Always
-        image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.9"
+        image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.10"
         resources:
           requests:
             memory: "1Gi"
@@ -161,7 +161,7 @@ statefulset rolling update complete 3 pods at revision zk-1312265925.
 
 The docker image contained in this repository is comprised of a base 
 Ubuntu 16.04 image using the latest release of the OpenJDK JRE based on the 
-1.8 JVM and the latest stable release of ZooKeeper, 3.4.9. Ubuntu is a much 
+1.8 JVM and the latest stable release of ZooKeeper, 3.4.10. Ubuntu is a much 
 larger image than BusyBox or Alpine, but these images contain mucl or ulibc. 
 This requires a custom version of OpenJDK to be built against a libc runtime 
 other than glibc. No vendor of the ZooKeeper software supplies or verifies the 
@@ -298,7 +298,7 @@ parameters supplied to the script and the Service's above.
 containers:
 - name: kubernetes-zookeeper
   imagePullPolicy: Always
-  image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.9"
+  image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.10"
   resources:
     requests:
       memory: "2Gi"
@@ -489,7 +489,7 @@ collect these metrics and provide them to a collector.
 
 ```bash
 bash$ kubectl exec zk-0 zookeeper-metrics
-zk_version	3.4.9-1757313, built on 08/23/2016 06:50 GMT
+zk_version	3.4.10-1757313, built on 08/23/2016 06:50 GMT
 zk_avg_latency	0
 zk_max_latency	0
 zk_min_latency	0
