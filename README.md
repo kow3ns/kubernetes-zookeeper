@@ -86,7 +86,7 @@ numChildren = 0
 
 ### Updating the StatefulSet
 
-As mentioned in the [limitations](#limitiations), you can't scale a ZooKeeper 
+As mentioned in the [limitations](#limitations), you can't scale a ZooKeeper 
 ensemble. You can update all of the configuration and resource requests. 
 Edit the zookeeper.yaml manifest to decrease the memory resource request and 
 the jvm heap size. The StatefulSet controller will update each Pod in the 
