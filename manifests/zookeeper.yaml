@@ -45,7 +45,6 @@ metadata:
 spec:
   serviceName: zk-hs
   replicas: 3
-  podManagementPolicy: Parallel
   updateStrategy: 
     type: RollingUpdate
   template:
@@ -92,7 +91,7 @@ spec:
           --tick_time=2000 \
           --init_limit=10 \
           --sync_limit=5 \
-          --heap=1024M \
+          --heap=1G \
           --max_client_cnxns=60 \
           --snap_retain_count=3 \
           --purge_interval=12 \

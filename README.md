@@ -1,11 +1,12 @@
 # Kubernetes ZooKeeper
+
 This project contains a Docker image meant to facilitate the deployment of 
 [Apache ZooKeeper](https://zookeeper.apache.org/) on 
 [Kubernetes](http://kubernetes.io/) using 
 [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). 
 It requires Kubernetes 1.7 or greater.
 
-##Limitations
+## Limitations
 
 1. Scaling is not currently supported. An ensemble's membership can not be 
 updated in a safe way in ZooKeeper 3.4.9 (The current stable release).
@@ -13,7 +14,151 @@ updated in a safe way in ZooKeeper 3.4.9 (The current stable release).
 1. Persistent Volumes must be used. emptyDirs will likely result in a loss of 
 data.
 
+## Usage 
+
+### Creating an Ensemble
+
+To use the default manifest you need a Kubernetes 1.7 cluster with at least 
+3 nodes each having .5 CPU and 2 Gib of memory.
+
+To create an ensemble use `kubectl apply` to create the components in the 
+zookeeper.yaml file in the manifests directory.
+
+```bash
+kubectl apply -f manifests/zookeeper.yaml 
+service "zk-hs" configured
+service "zk-cs" configured
+poddisruptionbudget "zk-pdb" configured
+statefulset "zk" created
+```
+
+In another terminal you can watch the Pods being created.
+```bash
+kubectl get po -lapp=zk -w
+NAME      READY     STATUS              RESTARTS   AGE
+zk-0      1/1       Running             0          32s
+zk-1      0/1       ContainerCreating   0          12s
+zk-1      0/1       Running   0         13s
+zk-1      1/1       Running   0         30s
+zk-2      0/1       Pending   0         0s
+zk-2      0/1       Pending   0         0s
+zk-2      0/1       ContainerCreating   0         0s
+zk-2      0/1       Running   0         11s
+zk-2      1/1       Running   0         30s
+
+```
+
+After the third Pod is created exit the terminal.
+
+### Testing the Ensemble
+
+You can use `kubectl exec` to run the zkCli.sh script in a bash shell on one of 
+the Pods.
+
+```bash
+$ kubectl exec -ti zk-0 -- bash
+zookeeper@zk-0:/$ zkCli.
+[zk: localhost:2181(CONNECTED) 1] create /hello world
+Created /hello
+
+```
+
+From another Pod you can use the same technique to retrieve the value.
+
+```bash
+$ kubectl exec -ti zk-1 -- bash
+zookeeper@zk-1:/$ zkCli.                                                                                             
+zkCli.cmd  zkCli.sh   
+[zk: localhost:2181(CONNECTED) 0] get /hello
+world
+cZxid = 0x800000003
+ctime = Mon Jun 12 21:25:25 UTC 2017
+mZxid = 0x800000003
+mtime = Mon Jun 12 21:25:25 UTC 2017
+pZxid = 0x800000003
+cversion = 0
+dataVersion = 0
+aclVersion = 0
+ephemeralOwner = 0x0
+dataLength = 5
+numChildren = 0
+```
+
+### Updating the StatefulSet
+
+As mentioned in the [limitations](#limitiations), you can't scale a ZooKeeper 
+ensemble. You can update all of the configuration and resource requests. 
+Edit the zookeeper.yaml manifest to decrease the memory resource request and 
+the jvm heap size. The StatefulSet controller will update each Pod in the 
+StatefulSet one at a time, and it will wait for the udpated Pod to be Running 
+and Ready before updating the next Pod.
+
+```yaml
+ name: kubernetes-zookeeper
+        imagePullPolicy: Always
+        image: "gcr.io/google_samples/kubernetes-zookeeper:1.0-3.4.9"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: leader-election
+        command:
+        - sh
+        - -c
+        - "start-zookeeper \
+          --servers=3 \
+          --data_dir=/var/lib/zookeeper/data \
+          --data_log_dir=/var/lib/zookeeper/data/log \
+          --conf_dir=/opt/zookeeper/conf \
+          --client_port=2181 \
+          --election_port=3888 \
+          --server_port=2888 \
+          --tick_time=2000 \
+          --init_limit=10 \
+          --sync_limit=5 \
+          --heap=512M \
+          --max_client_cnxns=60 \
+          --snap_retain_count=3 \
+          --purge_interval=12 \
+          --max_session_timeout=40000 \
+          --min_session_timeout=4000 \
+          --log_level=INFO"
+```
+
+Apply the manifest using `kubectl apply`.
+
+```bash
+$ kubectl apply -f manifests/zookeeper.yaml 
+service "zk-hs" configured
+service "zk-cs" configured
+poddisruptionbudget "zk-pdb" configured
+statefulset "zk" configured
+```
+
+Use `kubectl rollout status` to watch the update progress.
+
+```bash
+kubectl rollout status sts/zk
+waiting for statefulset rolling update to complete 0 pods at revision zk-1312265925...
+Waiting for 1 pods to be ready...
+Waiting for 1 pods to be ready...
+waiting for statefulset rolling update to complete 1 pods at revision zk-1312265925...
+Waiting for 1 pods to be ready...
+Waiting for 1 pods to be ready...
+waiting for statefulset rolling update to complete 2 pods at revision zk-1312265925...
+Waiting for 1 pods to be ready...
+Waiting for 1 pods to be ready...
+statefulset rolling update complete 3 pods at revision zk-1312265925.
+```
+
 ## Docker Image
+
 The docker image contained in this repository is comprised of a base 
 Ubuntu 16.04 image using the latest release of the OpenJDK JRE based on the 
 1.8 JVM and the latest stable release of ZooKeeper, 3.4.9. Ubuntu is a much 
@@ -30,8 +175,8 @@ into the /usr/etc/zookeeper/, and all executables are sym linked into
 /usr/bin. The ZooKeeper data directories are contained in /var/lib/zookeeper. 
 This is identical to the RPM distribution that users should be familiar with.
 
-## Makefile 
-The makefile contained in this directory has three commands.
+### Makefile 
+The makefile contained in the docker directory has three commands.
 - The `build` command will build the Docker image locally.
 - The `push` command will push the image, provided you have correct permissions, 
 to grc.io/samples repository.
@@ -211,11 +356,14 @@ containers:
                         Service.
 
     --election_port     The port on which the ZooKeeper process will perform 
-                        leader election. The default is 3888.
+                        leader election. The default is 3888. This port must be 
+                        specified in both containerPorts and in the Headless 
+                        Service.
 
     --server_port       The port on which the ZooKeeper process will listen for 
                         requests from other servers in the ensemble. The 
-                        default is 2888. 
+                        default is 2888. This port must be specified in both 
+                        containerPorts and in the Client Service.
 
     --tick_time         The length of a ZooKeeper tick in ms. The default is 
                         2000.
@@ -228,7 +376,9 @@ containers:
 
     --heap              The maximum amount of heap to use. The format is the 
                         same as that used for the Xmx and Xms parameters to the 
-                        JVM. e.g. --heap=2G. The default is 2G.
+                        JVM. e.g. --heap=2G. The default is 2G. You must be sure
+                        to provide sufficient overhead in the memory resources 
+                        requested by ZooKeeper.
 
     --max_client_cnxns  The maximum number of client connections that the 
                         ZooKeeper process will accept simultaneously. The 
