@@ -28,23 +28,13 @@ spec:
   selector:
     app: zk
 ---
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  name: zk-pdb
-spec:
-  selector:
-    matchLabels:
-      app: zk
-  maxUnavailable: 1
----
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
   name: zk
 spec:
   serviceName: zk-hs
-  replicas: 3
+  replicas: 1
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
@@ -60,7 +50,7 @@ spec:
                 matchExpressions:
                   - key: "app"
                     operator: In
-                    values: 
+                    values:
                     - zk
               topologyKey: "kubernetes.io/hostname"
       containers:
@@ -69,8 +59,8 @@ spec:
         image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.4.10"
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "2"
+            memory: "1Gi"
+            cpu: "0.5"
         ports:
         - containerPort: 2181
           name: client
@@ -82,7 +72,7 @@ spec:
         - sh
         - -c
         - "start-zookeeper \
-          --servers=3 \
+          --servers=1 \
           --data_dir=/var/lib/zookeeper/data \
           --data_log_dir=/var/lib/zookeeper/data/log \
           --conf_dir=/opt/zookeeper/conf \
@@ -92,7 +82,7 @@ spec:
           --tick_time=2000 \
           --init_limit=10 \
           --sync_limit=5 \
-          --heap=3G \
+          --heap=512M \
           --max_client_cnxns=60 \
           --snap_retain_count=3 \
           --purge_interval=12 \
@@ -128,4 +118,4 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 250Gi
+          storage: 10Gi

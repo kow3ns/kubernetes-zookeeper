@@ -1,5 +1,5 @@
 VERSION=1.0-3.4.10
-PROJECT_ID=google_samples
+PROJECT_ID=google_containers
 PROJECT=gcr.io/${PROJECT_ID}
 
 all: build

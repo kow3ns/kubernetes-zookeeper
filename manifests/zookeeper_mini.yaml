@@ -45,6 +45,8 @@ metadata:
 spec:
   serviceName: zk-hs
   replicas: 3
+  updateStrategy:
+    type: RollingUpdate
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
@@ -60,7 +62,7 @@ spec:
                 matchExpressions:
                   - key: "app"
                     operator: In
-                    values: 
+                    values:
                     - zk
               topologyKey: "kubernetes.io/hostname"
       containers:
@@ -69,8 +71,8 @@ spec:
         image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.4.10"
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "2"
+            memory: "1Gi"
+            cpu: "0.5"
         ports:
         - containerPort: 2181
           name: client
@@ -92,7 +94,7 @@ spec:
           --tick_time=2000 \
           --init_limit=10 \
           --sync_limit=5 \
-          --heap=3G \
+          --heap=512M \
           --max_client_cnxns=60 \
           --snap_retain_count=3 \
           --purge_interval=12 \
@@ -128,4 +130,4 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 250Gi
+          storage: 10Gi

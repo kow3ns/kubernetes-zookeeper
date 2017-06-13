@@ -1,8 +1,8 @@
-Servers: 5
-Cpu: "2"
-Memory: "4Gi"
-Heap: "2G"
-Storage: "250Gi"
+Servers: 1
+Cpu: "0.5"
+Memory: "1Gi"
+Heap: "512M"
+Storage: "10Gi"
 ServerPort: 2888
 LeaderElectionPort: 3888
 ClientPort: 2181
@@ -16,7 +16,7 @@ SnapRetain: 3
 PurgeHours: 1
 ProbeInitialDelaySeconds : 15
 ProbeTimeoutSeconds : 5
-AntiAffinity: "hard"
+AntiAffinity: "soft"
 LogLevel: "INFO"
 MaxSessionTimeout: 40000
 MinSessionTimeout: 4000
