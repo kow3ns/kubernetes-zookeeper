@@ -2,7 +2,8 @@
 
  This helm chart provides an implementation of the ZooKeeper 
  [StatefulSet](http://kubernetes.io/docs/concepts/abstractions/controllers/statefulsets/) found in Kubernetes Contrib 
- [Zookeeper StatefulSet](https://github.com/kubernetes/contrib/tree/master/statefulsets/zookeeper).
+ [Zookeeper StatefulSet](https://github.com/kubernetes/contrib/tree/master/statefulsets/zookeeper). 
+ **This chart will currently not work with any release of Helm.**
   
 ## Prerequisites
 * Kubernetes 1.7
@@ -18,7 +19,7 @@ This chart will do the following:
 * Create a [PodDisruptionBudget](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-disruption-budget/) so kubectl drain will respect the Quorum 
 size of the ensemble.
 * Create a [Headless Service](https://kubernetes.io/docs/concepts/services-networking/service/) to control the domain of the ZooKeeper ensemble.
-* Create a Service configured to connect to the available ZooKeeper instance on the configured client port.
+* Create a Service configured to connect to the available ZooKeeper instances on the configured client port.
 * Optionally, apply a [Pod Anti-Affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#inter-pod-affinity-and-anti-affinity-beta-feature) to spread the 
 ZooKeeper ensemble across nodes.
 
@@ -55,9 +56,9 @@ statefulsets/zk-my-zk   3         2         1m
 1. `zy-my-zk` is the StatefulSet created by the chart.
 1. `zk-my-zk-0` - `zk-my-zk-2` are the Pods created by the StatefulSet. Each Pod has a single 
 container running a ZooKeeper server.
-1. `zk-hsvc-my-zk` is the Headless Server used to control the network domain of the ZooKeeper 
+1. `zk-hs-my-zk` is the Headless Service used to control the network domain of the ZooKeeper 
 ensemble.
-1. `zk-csvc-my-zk` is a Service that can be used by clients to connect to an available ZooKeeper 
+1. `zk-cs-my-zk` is a Service that can be used by clients to connect to an available ZooKeeper 
 server.
 
 ## Configuration
@@ -78,7 +79,7 @@ The configuration parameters in this section control the resources requested and
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `Servers` | The number of ZooKeeper servers. This should always be (1,3,5, or 7) | `3` |
-| `MinAvailable` | The minimum number of servers that must be available during evictions. This should in the interval `[(Servers/2) + 1,(Servers - 1)]`. | `Servers-1` |
+| `MaxUnvailable` | The maximum number of servers that may be unavailable during eviction. This should always be one. | `1` |
 | `Cpu` | The amount of CPU to request. As ZooKeeper is not very CPU intensive, `2` is a good choice to start with for a production deployment. | `1` |
 | `Heap` | The amount of JVM heap that the ZooKeeper servers will use. As ZooKeeper stores all of its data in memory, this value should reflect the size of your working set. The JVM -Xms/-Xmx format is used. |`2G` |
 | `Memory` | The amount of memory to request. This value should be at least 2 GiB larger than `Heap` to avoid swapping. You many want to use `1.5 * Heap` for values larger than 2GiB. The Kubernetes format is used. |`2Gi` |
@@ -149,76 +150,6 @@ This parameter controls when the image is pulled from the repository.
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `ImagePullPolicy` | The policy for pulling the image from the repository. | `Always` |
-
-# Deep dive
-
-## Image Details
-The image used for this chart is based on Ubuntu 16.04 LTS. This image is larger than Alpine or BusyBox, but it 
-provides glibc, rather than ulibc or mucl, and a JVM release that is built against it. You can easily convert this 
-chart to run against a smaller image with a JVM that is build against that images libc. However, as far as we know, 
-no Hadoop vendor supports, or has verified, ZooKeeper running on such a JVM.
-
-## JVM Details
-The Java Virtual Machine used for this chart is the OpenJDK JVM 8u111 JRE (headless).
-
-## ZooKeeper Details
-The ZooKeeper version is the latest stable version (3.4.10). The distribution is installed into /opt/zookeeper-3.4.10. This
-directory is symbolically linked to /opt/zookeeper. Symlinks are created to simulate a rpm installation into /usr.
-
-## Failover
-
-You can test failover by killing the leader. Insert a key:
-```console
-$ kubectl exec <RELEASE-NAME>-0 -- /opt/zookeeper/bin/zkCli.sh create /foo bar;
-$ kubectl exec <RELEASE-NAME>-2 -- /opt/zookeeper/bin/zkCli.sh get /foo;
-
-Watch existing members:
-```console
-$  kubectl run --attach bbox --image=busybox --restart=Never -- sh -c 'while true; do for i in 0 1 2; do echo zk-$i $(echo stats | nc <pod-name>.<headless-service-name>:2181 | grep Mode); sleep 1; done; done';
-
-zk-2 Mode: follower
-zk-0 Mode: follower
-zk-1 Mode: leader
-zk-2 Mode: follower
-```
-
-Delete Pods and wait for the StatefulSet controller to bring them back up:
-```console
-$ kubectl delete po -l component=${RELEASE-NAME}
-$ kubectl get po --watch-only
-NAME      READY     STATUS     RESTARTS   AGE
-zk-0     0/1       Init:0/2   0          16s
-zk-0     0/1       Init:0/2   0         21s
-zk-0     0/1       PodInitializing   0         23s
-zk-0     1/1       Running   0         41s
-zk-1     0/1       Pending   0         0s
-zk-1     0/1       Init:0/2   0         0s
-zk-1     0/1       Init:0/2   0         14s
-zk-1     0/1       PodInitializing   0         17s
-zk-1     0/1       Running   0         18s
-zk-2     0/1       Pending   0         0s
-zk-2     0/1       Init:0/2   0         0s
-zk-2     0/1       Init:0/2   0         12s
-zk-2     0/1       Init:0/2   0         28s
-zk-2     0/1       PodInitializing   0         31s
-zk-2     0/1       Running   0         32s
-...
-
-zk-0 Mode: follower
-zk-1 Mode: leader
-zk-2 Mode: follower
-```
-
-Check the previously inserted key:
-```console
-$ kubectl exec zk-1 -- /opt/zookeeper/bin/zkCli.sh get /foo
-ionid = 0x354887858e80035, negotiated timeout = 30000
-
-WATCHER::
-
-WatchedEvent state:SyncConnected type:None path:null
-bar
-```
 
 ## Scaling
 
