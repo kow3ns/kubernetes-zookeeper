@@ -27,7 +27,7 @@ ZooKeeper ensemble across nodes.
 
 You can install the chart with the release name `my-zk` as below.
 
-```console
+```shell
 $ helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
 $ helm install --name my-zk incubator/zookeeper
 ```
@@ -38,7 +38,7 @@ If you do not specify a name, helm will select a name for you.
 
 You can use `kubectl get` to view all of the installed components.
 
-```console{%raw}
+```shell
 $ kubectl get all -l component=zk-my-zk
 NAME            READY     STATUS              RESTARTS   AGE
 po/zk-my-zk-0   1/1       Running             0          1m
@@ -67,7 +67,7 @@ You can specify each parameter using the `--set key=value[,key=value]` argument 
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. 
 For example,
 
-```console
+```shell
 $ helm install --name my-release -f values.yaml incubator/zookeeper
 ```
 
