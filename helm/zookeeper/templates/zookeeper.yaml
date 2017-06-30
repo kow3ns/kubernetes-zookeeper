@@ -65,6 +65,9 @@ metadata:
 spec:
   serviceName: "{{ printf "zk-hs-%s" .Release.Name | trunc 24 }}"
   replicas: {{.Values.Servers}}
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: {{.Values.UpdateStrategy}}
   template:
     metadata:
       labels:
@@ -83,9 +86,10 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       {{- else if eq .Values.AntiAffinity "soft"}}
       affinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
              - weight: 1
-               podAntiAffinityTerm:
+               podAffinityTerm:
                  labelSelector:
                     matchExpressions:
                       - key: "component"
@@ -120,16 +124,15 @@ spec:
           --client_port={{.Values.ClientPort}} \
           --election_port={{.Values.LeaderElectionPort}} \
           --server_port={{.Values.ServerPort}} \
-          --tick_time={{.Values.Tick}} \
           --tick_time={{.Values.TickTimeMs}} \
           --init_limit={{.Values.InitTicks}} \
           --sync_limit={{.Values.SyncTicks}} \
           --heap={{.Values.Heap}} \
           --max_client_cnxns={{.Values.ClientCnxns}} \
           --snap_retain_count={{.Values.SnapRetain}} \
-          --purge_interval={{.Values.PurgeInterval}} \
+          --purge_interval={{.Values.PurgeHours}} \
           --max_session_timeout={{.Values.MaxSessionTimeout}} \
-          --min_session_timeout={{.Values.MinSessionTimeout}}\
+          --min_session_timeout={{.Values.MinSessionTimeout}} \
           --log_level={{.Values.LogLevel}}"
         readinessProbe:
           exec:
