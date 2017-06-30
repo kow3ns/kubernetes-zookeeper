@@ -12,16 +12,16 @@ ZooKeeper 3.4.10 (The current stable release).
 1. Persistent Volumes must be used. emptyDirs will likely result in a loss of data.
 
 ## ZooKeeper Docker Image 
-The [docker](../docker) directory contains the [Makefile](../docker/Makefile) for a [Docker image](../docker/Dockerfile) that 
-runs a ZooKeeper server using some custom [scripts](../docker/scripts/README.md).
+The [docker](docker) directory contains the [Makefile](docker/Makefile) for a [Docker image](docker/Dockerfile) that 
+runs a ZooKeeper server using some custom [scripts](docker/scripts/README.md).
 
 ## Manifests
-The [manifests](../manifests) directory contains server Kubernetes [manifests](../manifests/README.md) that can be used for 
+The [manifests](manifests) directory contains server Kubernetes [manifests](manifests/README.md) that can be used for 
 demonstration purposes or production deployments. If you primarily deploy manifests directly you can modify any of 
 these to fit your use case.
 
 ## Helm
-The [helm](../helm/zookeeper) directory contains a [helm repository](../helm/zookeeper/README.md) that deploys a ZooKeeper 
+The [helm](helm/zookeeper) directory contains a [helm repository](helm/zookeeper/README.md) that deploys a ZooKeeper 
 ensemble.
 
 
