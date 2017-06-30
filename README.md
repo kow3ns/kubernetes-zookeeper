@@ -1,5 +1,5 @@
 # Kubernetes ZooKeeper
-This project contains a Docker image meant to facilitate the deployment of 
+This project contains tools to facilitate the deployment of 
 [Apache ZooKeeper](https://zookeeper.apache.org/) on 
 [Kubernetes](http://kubernetes.io/) using 
 [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). 
@@ -130,7 +130,7 @@ spec:
 ```
 
 ### Networking
-The Headless Service that controls the network domain of the ensemble must have two ports. The `sever` port is used for 
+The Headless Service that controls the domain of the ensemble must have two ports. The `sever` port is used for 
 inter-server communication, and the `leader-election` port is used to perform leader election.
 
 ```yaml
