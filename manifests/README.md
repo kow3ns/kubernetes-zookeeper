@@ -198,9 +198,9 @@ balance client connections to available servers, and a StatefulSet to provide th
 zookeeper.yaml and zookeeper_mini.yaml additionally contain a PodDisruptionBudget to manage planned disruptions.
 
 ## Headless Service
-The `zk-hs` Headless Service will manage the network domain of the ensemble. It has named ports, one for leader 
-election and one for inter-server communication. These ports must correspond to the container ports specified in the 
-StatefulSet and the parameters passed to the StatefulSet's Pods' command.
+The `zk-hs` Headless Service will manage the domain of the ensemble. It has named ports, one for leader election and 
+one for inter-server communication. These ports must correspond to the container ports specified in the StatefulSet 
+and the parameters passed to the StatefulSet's Pods' command.
 
 ```yaml
 apiVersion: v1
