@@ -8,7 +8,7 @@ Three different manifests are provided as templates based on different uses case
     - Each server will consume 2 CPUs.
     - Each server will consume 1 Persistent Volume with 250 GiB of storage.
     - You can tune the parameters as nessecary to suite the needs of your deployment.
-    - **The total footprint 5 Nodes, 10 CPUs, 20 GiB memory, 1250 GiB disk**
+    - **The total footprint is 5 Nodes, 10 CPUs, 20 GiB memory, 1250 GiB disk**
 1. [zookeeper_mini.yaml](zookeeper_mini.yaml) provides a manifest that is suitable for a demos, testing, or 
 development use cases where a single zookeeper server is not desirable. 
     - It provides 3 servers with a disruption budget of 1 planned disruption. This ensemble will not tolerate any 
@@ -18,7 +18,7 @@ development use cases where a single zookeeper server is not desirable.
     - Each server will consume 0.5 CPUs.
     - Each server will consume 1 Persistent Volume with 10 GiB of storage.
     - You can, again, tune this manifest to your specific needs.
-    - **The total footprint 3 Nodes, 1.5 CPUs, 3 GiB memory, 30 GiB disk**
+    - **The total footprint is 3 Nodes, 1.5 CPUs, 3 GiB memory, 30 GiB disk**
 1. [zookeeper_micro.yaml](zookeeper_micro.yaml) provides a manifest that is suitable for demos, testing, or development 
     use cases where a single zookeeper server will suffice. 
     - It provides 1 server with no disruption budget.

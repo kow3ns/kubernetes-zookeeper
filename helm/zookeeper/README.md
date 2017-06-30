@@ -28,8 +28,8 @@ ZooKeeper ensemble across nodes.
 You can install the chart with the release name `my-zk` as below.
 
 ```shell
-$ helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
-$ helm install --name my-zk incubator/zookeeper
+$ helm repo add k8szk https://kow3ns.github.io/kubernetes-zookeeper/helm/repo/
+$ helm install --name my-zk k8s/zookeeper --values=<values>
 ```
 
 If you do not specify a name, helm will select a name for you.
@@ -40,17 +40,17 @@ You can use `kubectl get` to view all of the installed components.
 
 ```shell
 $ kubectl get all -l component=zk-my-zk
-NAME            READY     STATUS              RESTARTS   AGE
-po/zk-my-zk-0   1/1       Running             0          1m
-po/zk-my-zk-1   1/1       Running             0          59s
-po/zk-my-zk-2   1/1       Running             0          12s
+NAME            READY     STATUS    RESTARTS   AGE
+po/zk-my-zk-0   1/1       Running   0          49s
+po/zk-my-zk-1   1/1       Running   0          49s
+po/zk-my-zk-2   1/1       Running   0          49s
 
-NAME                CLUSTER-IP    EXTERNAL-IP   PORT(S)             AGE
-svc/zk-csvc-my-zk   10.0.60.195   <none>        2181/TCP            1m
-svc/zk-hsvc-my-zk   None          <none>        2888/TCP,3888/TCP   1m
+NAME              TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)             AGE
+svc/zk-cs-my-zk   ClusterIP   10.0.22.15   <none>        2181/TCP            49s
+svc/zk-hs-my-zk   ClusterIP   None         <none>        2888/TCP,3888/TCP   49s
 
 NAME                    DESIRED   CURRENT   AGE
-statefulsets/zk-my-zk   3         2         1m
+statefulsets/zk-my-zk   3         3         49s
 ```
 
 1. `zy-my-zk` is the StatefulSet created by the chart.
@@ -71,7 +71,36 @@ For example,
 $ helm install --name my-release -f values.yaml incubator/zookeeper
 ```
 
-> **Tip**: You can use the default [values.yaml](values.yaml)
+### Values
+You can use [values.yaml](values.yaml), [value-mini.yaml](values-mini.yaml), or [value-micro.yaml](values-micro.yaml) 
+as a starting point for configuring an ensemble.
+
+1. [values.yaml](values.yaml) installs an ensemble that is close to production readiness.
+    - It provides 5 servers with a disruption budget of 1 planned disruption. This ensemble will tolerate 1 planned and 
+    1 unplanned failure.
+    - Each server will consume 4 GiB of memory, 3 Gib of which will be dedicated to the ZooKeeper JVM heap.
+    - Each server will consume 2 CPUs.
+    - Each server will consume 1 Persistent Volume with 250 GiB of storage.
+    - You can tune the parameters as nessecary to suite the needs of your deployment.
+    - **The total footprint is 5 Nodes, 10 CPUs, 20 GiB memory, 1250 GiB disk**
+1. [values-mini.yaml](values-mini.yaml) installs an ensemble that is suitable for a demos, testing, or 
+development use cases where a single zookeeper server is not desirable. 
+    - It provides 3 servers with a disruption budget of 1 planned disruption. This ensemble will not tolerate any 
+    concurrent unplanned failures during a planned disruption.
+    - Each server will consume 1 GiB of memory, 512 MiB of which will be dedicated to the ZooKeeper 
+   JVM heap.
+    - Each server will consume 0.5 CPUs.
+    - Each server will consume 1 Persistent Volume with 10 GiB of storage.
+    - You can, again, tune this manifest to your specific needs.
+    - **The total footprint is 3 Nodes, 1.5 CPUs, 3 GiB memory, 30 GiB disk**
+1. [values-micro.yaml](values_micro.yaml) installs and ensemble is suitable for demos, testing, or development 
+    use cases where a single zookeeper server will suffice. 
+    - It provides 1 server with no disruption budget.
+    - The server will consume 1 GiB of memory, 512 Mib of which will be dedicated to the ZooKeeper 
+    JVM heap.
+    - The server will consume 0.5 CPUs.
+    - The server will consume 1 Persistent Volume with 10 GiB of storage.
+    - **The total footprint is 1 Node, 0.5 CPUs, 1 GiB memory, 10 GiB disk**
 
 ### Resources
 The configuration parameters in this section control the resources requested and utilized by the ZooKeeper ensemble.

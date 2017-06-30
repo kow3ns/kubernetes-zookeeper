@@ -315,6 +315,7 @@ implement your own mechanism for retaining and removing snapshots, or configure 
 ### Pod Management Policy 
 ZooKeeper is not sensitive to the order in which Pods are started. All Pods in the StatefulSet may be launched and 
 terminated in parallel. This is accomplished by setting the `spec.podManagementPolicy` to `Parallel`.
+
 ```yaml
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -329,6 +330,7 @@ spec:
 ### Update Strategy 
 The Update Strategy for the StatefulSet is set to `RollingUpdate`. This enables the rolling update feature for 
 StatefulSets in Kubernetes 1.7, and it allows for modifications to the StatefulSet to be propagated to its Pods.
+
 ```yaml
 apiVersion: apps/v1beta1
 kind: StatefulSet

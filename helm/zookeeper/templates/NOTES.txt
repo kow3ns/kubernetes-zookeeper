@@ -17,8 +17,9 @@ ensemble. The connection string takes the form
 <server>:<port>,<server>:<port>,... . If your ensemble has greater than 1
 server, you should provide multiple servers in the connection string to allow
 for the client to continue to function in the presence of individual server
-failures. It is important that you do not use IP addresses and instead use the
+failures. If you want to configure individual connections to each server in
+ensemble, it is important that you do not use IP addresses and instead use the
 DNS entries for the domain established by the StatefulSet's HeadlessService.
-Your connection string should look like zk-{{.Release.Name  | trunc 24 }}-0.{{ printf "zk-hsvc-%s" .Release.Name | trunc 24 }}:{{.Values.ClientPort}},zk-{{.Release.Name  | trunc 24 }}-1.{{ printf "zk-hsvc-%s" .Release.Name | trunc 24 }}:{{.Values.ClientPort}},... .
-You can also use the client Service zk-csvc:{{.Values.ClientPort}} to
+Your connection string should look like zk-{{.Release.Name  | trunc 24 }}-0.{{ printf "zk-hs-%s" .Release.Name | trunc 24 }}.default.svc.cluster.local:{{.Values.ClientPort}}.default.svc.cluster.local,zk-{{.Release.Name  | trunc 24 }}-1.{{ printf "zk-hs-%s" .Release.Name | trunc 24 }}.default.svc.cluster.local:{{.Values.ClientPort}},... .
+You can also use the client Service {{ printf "zk-cs-%s" .Release.Name | trunc 24 }}.default.svc.cluster.local:{{.Values.ClientPort}} to
 connect to an available ZooKeeper server.
