@@ -48,8 +48,6 @@ spec:
   updateStrategy:
     type: RollingUpdate
   podManagementPolicy: Parallel
-  updateStrategy:
-    type: RollingUpdate
   template:
     metadata:
       labels:
