@@ -19,6 +19,9 @@
 #     --servers           The number of servers in the ensemble. The default 
 #                         value is 1.
 
+#     --server_[0-9]      Manually spceify hostname for each server number.
+#                         Required when using host network.
+
 #     --data_dir          The directory where the ZooKeeper process will store its
 #                         snapshots. The default is /var/lib/zookeeper/data.
 
@@ -101,6 +104,9 @@ Starts a ZooKeeper server based on the supplied options.
     --servers           The number of servers in the ensemble. The default 
                         value is 1.
 
+    --server_[0-9]      Manually spceify hostname for each server number.
+                        Required when using host network.
+
     --data_dir          The directory where the ZooKeeper process will store its
                         snapshots. The default is /var/lib/zookeeper/data.
 
@@ -180,7 +186,12 @@ function create_data_dirs() {
 function print_servers() {
     for (( i=1; i<=$SERVERS; i++ ))
     do
-        echo "server.$i=$NAME-$((i-1)).$DOMAIN:$SERVER_PORT:$ELECTION_PORT"
+        SERVER_NAME=$(eval echo \$SERVER_$i)
+        if [ -z "$SERVER_NAME" ]; then
+            echo "server.$i=$NAME-$((i-1)).$DOMAIN:$SERVER_PORT:$ELECTION_PORT"
+        else
+            echo "server.$i=$SERVER_NAME.$DOMAIN:$SERVER_PORT:$ELECTION_PORT"
+        fi
     done
 }
 
@@ -230,6 +241,10 @@ while getopts "$optspec" optchar; do
             case "${OPTARG}" in
                 servers=*)
                     SERVERS=${OPTARG##*=}
+                    ;;
+                server_[0-9]*=*)
+                    SERVER_OPT=${OPTARG%%=*}
+                    export "${SERVER_OPT^^}=${OPTARG##*=}"
                     ;;
                 data_dir=*)
                     DATA_DIR=${OPTARG##*=}
@@ -308,14 +323,16 @@ ID_FILE="$DATA_DIR/myid"
 CONFIG_FILE="$CONF_DIR/zoo.cfg"
 LOGGER_PROPS_FILE="$CONF_DIR/log4j.properties"
 JAVA_ENV_FILE="$CONF_DIR/java.env"
-if [[ $HOST =~ (.*)-([0-9]+)$ ]]; then
-    NAME=${BASH_REMATCH[1]}
-    ORD=${BASH_REMATCH[2]}
-else
-    echo "Fialed to parse name and ordinal of Pod"
-    exit 1
+MY_ID=$(env | grep -oP "[0-9]+(?==$HOST$)")
+if [ -z "$MY_ID" ]; then
+    if [[ $HOST =~ (.*)-([0-9]+)$ ]]; then
+        NAME=${BASH_REMATCH[1]}
+        ORD=${BASH_REMATCH[2]}
+    else
+        echo "Fialed to parse name and ordinal of Pod"
+        exit 1
+    fi
+    MY_ID=$((ORD+1))
 fi
-
-MY_ID=$((ORD+1))
 
 create_config && create_jvm_props && create_log_props && create_data_dirs && exec zkServer.sh start-foreground
