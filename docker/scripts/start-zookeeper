@@ -93,6 +93,8 @@ MAX_CLIENT_CNXNS=60
 SNAP_RETAIN_COUNT=3
 PURGE_INTERVAL=0
 SERVERS=1
+STANDALONE_ENABLED=false
+RECONFIG_ENABLED=true
 
 function print_usage() {
 echo "\
@@ -152,6 +154,15 @@ Starts a ZooKeeper server based on the supplied options.
     --min_session_timeout The minimum time in milliseconds for a client session 
                         timeout. The default value is 20 * tick time.
 
+    --standalone_enabled When set to false, a single server can be started in 
+                        replicated mode, a lone participant can run with observers, 
+                        and a cluster can reconfigure down to one node, and up 
+                        from one node. The default value is true. The default is
+                        false.
+
+    --reconfig_enabled  This controls the enabling or disabling of Dynamic 
+                        Reconfiguration feature. The default value is true.
+
     --log_level         The log level for the zookeeeper server. Either FATAL,
                         ERROR, WARN, INFO, DEBUG. The default is INFO.
 "
@@ -198,6 +209,8 @@ function create_config() {
     echo "maxSessionTimeout=$MAX_SESSION_TIMEOUT" >> $CONFIG_FILE
     echo "autopurge.snapRetainCount=$SNAP_RETAIN_COUNT" >> $CONFIG_FILE
     echo "autopurge.purgeInteval=$PURGE_INTERVAL" >> $CONFIG_FILE
+    echo "standaloneEnabled=$STANDALONE_ENABLED" >> $CONFIG_FILE
+    echo "reconfigEnabled=$RECONFIG_ENABLED" >> $CONFIG_FILE
      if [ $SERVERS -gt 1 ]; then
         print_servers >> $CONFIG_FILE
     fi
@@ -278,6 +291,12 @@ while getopts "$optspec" optchar; do
                     ;;
                 min_session_timeout=*)
                     MIN_SESSION_TIMEOUT=${OPTARG##*=}
+                    ;;
+                standalone_enabled=*)
+                    STANDALONE_ENABLED=${OPTARG##*=}
+                    ;;
+                reconfig_enabled=*)
+                    RECONFIG_ENABLED=${OPTARG##*=}
                     ;;
                 log_level=*)
                     LOG_LEVEL=${OPTARG##*=}
