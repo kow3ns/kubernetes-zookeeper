@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+# This script assumes you have skipACL configured
+
+MYID=$(tail -n 1 $ZK_DATA_DIR/myid)
+HOST=`hostname -s`
+DOMAIN=`hostname -d`
+CLIENT_PORT=$ZK_CS_SERVICE_PORT
+SERVER_PORT=2888
+ELECTION_PORT=3888
+ACTION=add
+
+if [[ $MYID -eq "1" ]]
+then
+    # No need to dynamically add initial zk participant
+    exit 0
+fi
+
+# Sync with Leader
+/opt/zookeeper/bin/zkCli.sh sync
+
+function print_usage() {
+echo "\
+Usage: zookeeper-dynamic-reconfig [ACTION=add|remove] [OPTIONS]
+Add or remove member to Zookeeper cluster.
+    --election_port     The port on which the ZooKeeper process will perform 
+                        leader election. The default is 3888.
+
+    --server_port       The port on which the ZooKeeper process will listen for 
+                        requests from other servers in the ensemble. The 
+                        default is 2888. 
+"
+}
+
+
+shopt -s nocasematch
+
+if [[ $# -eq 0 ]]; then
+    print_usage
+    exit;
+elif [[ $1 =~ "add" ]]; then
+    ACTION=add
+elif [[ $1 =~ "remove" ]]; then
+    ACTION=remove
+else
+    print_usage
+    exit;
+fi
+
+optspec=":hv-:"
+while getopts "$optspec" optchar; do
+
+    case "${optchar}" in
+        -)
+            case "${OPTARG}" in
+                election_port=*)
+                    ELECTION_PORT=${OPTARG##*=}
+                    ;;
+                server_port=*)
+                    SERVER_PORT=${OPTARG##*=}
+                    ;;
+                *)
+                    echo "Unknown option --${OPTARG}" >&2
+                    exit 1
+                    ;;
+            esac;;
+        h)
+            print_usage
+            exit
+            ;;
+        v)
+            echo "Parsing option: '-${optchar}'" >&2
+            ;;
+        *)
+            if [ "$OPTERR" != 1 ] || [ "${optspec:0:1}" = ":" ]; then
+                echo "Non-option argument: '-${OPTARG}'" >&2
+            fi
+            ;;
+    esac
+done
+
+if [[ $1 =~ "add" ]]; then    
+    /opt/zookeeper/bin/zkCli.sh reconfig -add server.$MYID=$HOSTNAME.$DOMAIN:$SERVER_PORT:$ELECTION_PORT\;$CLIENT_PORT
+else
+    /opt/zookeeper/bin/zkCli.sh reconfig -remove $MYID
+fi
