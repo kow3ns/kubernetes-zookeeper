@@ -92,19 +92,29 @@ spec:
           --tick_time=2000 \
           --init_limit=10 \
           --sync_limit=5 \
-          --heap=3G \
-          --max_client_cnxns=60 \
+          --heap=512M \
+          --max_client_cnxns=0 \
           --snap_retain_count=3 \
           --purge_interval=12 \
           --max_session_timeout=40000 \
           --min_session_timeout=4000 \
-          --log_level=INFO"
+          --standalone_enabled=false \
+          --reconfig_enabled=true \
+          --log_level=INFO \
+          --skip_acl=true"
+        lifecycle:
+          postStart:
+            exec:
+              command: ["sh", "-c", "sleep 30 && touch /opt/zookeeper/conf/test && zookeeper-dynamic-reconfig add --election_port=3888 --server_port=2888"]
+          preStop:
+            exec:
+              command: ["sh", "-c", "zookeeper-dynamic-reconfig remove"]
         readinessProbe:
           exec:
             command:
             - sh
             - -c
-            - "zookeeper-ready 2181"
+            - "/opt/zookeeper/bin/zkServer.sh status"
           initialDelaySeconds: 10
           timeoutSeconds: 5
         livenessProbe:
@@ -112,7 +122,7 @@ spec:
             command:
             - sh
             - -c
-            - "zookeeper-ready 2181"
+            - "/opt/zookeeper/bin/zkServer.sh status"
           initialDelaySeconds: 10
           timeoutSeconds: 5
         volumeMounts:
