@@ -68,7 +68,7 @@ spec:
       containers:
       - name: kubernetes-zookeeper
         imagePullPolicy: Always
-        image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.4.10"
+        image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.5.5"
         resources:
           requests:
             memory: "1Gi"

@@ -182,12 +182,14 @@ This parameter controls when the image is pulled from the repository.
 
 ## Scaling
 
-ZooKeeper can not be safely scaled in versions prior to 3.5.x. There are manual procedures for scaling an ensemble, but 
+Zookeeper can now safely scale, with the ability to perform dynamic ensemble reconfiguration, due to the recent stable release of 3.5.5.
+
+~~ZooKeeper can not be safely scaled in versions prior to 3.5.x. There are manual procedures for scaling an ensemble, but 
 as noted in the [ZooKeeper 3.5.2 documentation](https://zookeeper.apache.org/doc/r3.5.2-alpha/zookeeperReconfig.html) these 
 procedures require a rolling restart, are known to be error prone, and often result in a data loss.
 
 While ZooKeeper 3.5.x does allow for dynamic ensemble reconfiguration (including scaling membership), the current status 
-of the release is still alpha, and it is not recommended for production use.
+of the release is still alpha, and it is not recommended for production use.~~
 
 ## Limitations
 * StatefulSet and PodDisruptionBudget are beta resources.

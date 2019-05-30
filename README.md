@@ -7,7 +7,7 @@ It requires Kubernetes 1.7 or greater.
 
 ## Limitations
 1. Scaling is not currently supported. An ensemble's membership can not be updated in a safe way in 
-ZooKeeper 3.4.10 (The current stable release).
+ZooKeeper 3.5.5 (The current stable release).
 1. Observers are currently not supported. Contributions are welcome.
 1. Persistent Volumes must be used. emptyDirs will likely result in a loss of data.
 
@@ -96,7 +96,7 @@ spec:
       containers:
       - name: kubernetes-zookeeper
         imagePullPolicy: Always
-        image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.4.10"
+        image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.5.5"
         resources:
           requests:
             memory: "1Gi"
@@ -121,7 +121,7 @@ spec:
       containers:
       - name: kubernetes-zookeeper
         imagePullPolicy: Always
-        image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.4.10"
+        image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.5.5"
         resources:
           requests:
             memory: "4Gi"

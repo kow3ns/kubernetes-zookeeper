@@ -1,4 +1,4 @@
-VERSION=1.0-3.4.10
+VERSION=1.0-3.5.5
 PROJECT_ID=google_containers
 PROJECT=gcr.io/${PROJECT_ID}
 

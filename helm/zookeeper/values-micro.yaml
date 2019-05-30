@@ -6,7 +6,7 @@ Storage: "10Gi"
 ServerPort: 2888
 LeaderElectionPort: 3888
 ClientPort: 2181
-Image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.4.10"
+Image: "gcr.io/google_containers/kubernetes-zookeeper:1.0-3.5.5"
 ImagePullPolicy: "Always"
 TickTimeMs: 2000
 InitTicks: 10
