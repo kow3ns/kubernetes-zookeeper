@@ -5,18 +5,21 @@ ZK_DATA_LOG_DIR=/var/lib/zookeeper/log \
 ZK_LOG_DIR=/var/log/zookeeper \
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
+ARG ZK_VERSION=3.5.6
+ARG ZK_DIST=zookeeper-$ZK_VERSION
+
 COPY zookeeper-authors-keys .
 
-ARG ZK_DIST=zookeeper-3.4.10
 RUN set -x \
     && apt-get update \
     && apt-get install -y openjdk-8-jre-headless wget netcat-openbsd \
-	&& wget -q "http://www.apache.org/dist/zookeeper/$ZK_DIST/$ZK_DIST.tar.gz" \
-    && wget -q "http://www.apache.org/dist/zookeeper/$ZK_DIST/$ZK_DIST.tar.gz.asc" \
+	&& wget -O "$ZK_DIST.tar.gz" -q "http://www.apache.org/dist/zookeeper/$ZK_DIST/apache-$ZK_DIST-bin.tar.gz" \
+    && wget -O "$ZK_DIST.tar.gz.asc" -q "http://www.apache.org/dist/zookeeper/$ZK_DIST/apache-$ZK_DIST-bin.tar.gz.asc" \
     && export GNUPGHOME="$(mktemp -d)" \
     && gpg --import zookeeper-authors-keys \
-    && gpg --batch --verify "apache-$ZK_DIST.tar.gz.asc" "apache-$ZK_DIST.tar.gz" \
-    && tar -xzf "$ZK_DIST.tar.gz" -C /opt \
+    && gpg --batch --verify "$ZK_DIST.tar.gz.asc" "$ZK_DIST.tar.gz" \
+    && mkdir opt/$ZK_DIST \
+    && tar -xzf "$ZK_DIST.tar.gz" -C /opt/$ZK_DIST --strip-components 1 \
     && rm -r "$GNUPGHOME" "$ZK_DIST.tar.gz" "$ZK_DIST.tar.gz.asc" \
     && ln -s /opt/$ZK_DIST /opt/zookeeper \
     && rm -rf /opt/zookeeper/CHANGES.txt \
@@ -43,7 +46,7 @@ RUN set -x \
 COPY scripts /opt/zookeeper/bin/
 
 # Create a user for the zookeeper process and configure file system ownership 
-# for nessecary directories and symlink the distribution as a user executable
+# for necessary directories and symlink the distribution as a user executable
 RUN set -x \
 	&& useradd $ZK_USER \
     && [ `id -u $ZK_USER` -eq 1000 ] \
@@ -52,5 +55,4 @@ RUN set -x \
 	&& chown -R "$ZK_USER:$ZK_USER" /opt/$ZK_DIST $ZK_DATA_DIR $ZK_LOG_DIR $ZK_DATA_LOG_DIR /tmp/zookeeper \
 	&& ln -s /opt/zookeeper/conf/ /usr/etc/zookeeper \
 	&& ln -s /opt/zookeeper/bin/* /usr/bin \
-	&& ln -s /opt/zookeeper/$ZK_DIST.jar /usr/share/zookeeper/ \
 	&& ln -s /opt/zookeeper/lib/* /usr/share/zookeeper 
