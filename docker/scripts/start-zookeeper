@@ -197,7 +197,7 @@ function create_config() {
     echo "minSessionTimeout=$MIN_SESSION_TIMEOUT" >> $CONFIG_FILE
     echo "maxSessionTimeout=$MAX_SESSION_TIMEOUT" >> $CONFIG_FILE
     echo "autopurge.snapRetainCount=$SNAP_RETAIN_COUNT" >> $CONFIG_FILE
-    echo "autopurge.purgeInteval=$PURGE_INTERVAL" >> $CONFIG_FILE
+    echo "autopurge.purgeInterval=$PURGE_INTERVAL" >> $CONFIG_FILE
      if [ $SERVERS -gt 1 ]; then
         print_servers >> $CONFIG_FILE
     fi
