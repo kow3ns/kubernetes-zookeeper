@@ -17,7 +17,7 @@
 # is health. The $? variable will be set to 0 if server responds that it is 
 # healthy, or 1 if the server fails to respond.
 
-OK=$(echo ruok | nc 127.0.0.1 $1)
+OK=$(echo ruok | socat STDIO TCP:127.0.0.1:$1)
 if [ "$OK" == "imok" ]; then
 	exit 0
 else
