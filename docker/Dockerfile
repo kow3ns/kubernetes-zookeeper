@@ -5,15 +5,17 @@ ZK_DATA_LOG_DIR=/var/lib/zookeeper/log \
 ZK_LOG_DIR=/var/log/zookeeper \
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-ARG GPG_KEY=C823E3E5B12AF29C67F81976F5CECB3CB5E9BD2D
 ARG ZK_DIST=zookeeper-3.4.10
+
+COPY zookeeper-authors-keys .
+
 RUN set -x \
     && apt-get update \
     && apt-get install -y openjdk-8-jre-headless wget netcat-openbsd \
 	&& wget -q "https://archive.apache.org/dist/zookeeper/$ZK_DIST/$ZK_DIST.tar.gz" \
     && wget -q "https://archive.apache.org/dist/zookeeper/$ZK_DIST/$ZK_DIST.tar.gz.asc" \
     && export GNUPGHOME="$(mktemp -d)" \
-    && gpg --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key "$GPG_KEY" \
+    && gpg --import zookeeper-authors-keys \
     && gpg --batch --verify "$ZK_DIST.tar.gz.asc" "$ZK_DIST.tar.gz" \
     && tar -xzf "$ZK_DIST.tar.gz" -C /opt \
     && rm -r "$GNUPGHOME" "$ZK_DIST.tar.gz" "$ZK_DIST.tar.gz.asc" \
