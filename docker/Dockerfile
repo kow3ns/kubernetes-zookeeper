@@ -5,7 +5,7 @@ ZK_DATA_LOG_DIR=/var/lib/zookeeper/log \
 ZK_LOG_DIR=/var/log/zookeeper \
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-ARG ZK_DIST=zookeeper-3.4.10
+ARG ZK_DIST=zookeeper-3.4.14
 
 COPY zookeeper-authors-keys .
 
