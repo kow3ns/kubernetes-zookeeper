@@ -1,4 +1,4 @@
-FROM ubuntu:16.04 
+FROM ubuntu:18.04 
 ENV ZK_USER=zookeeper \
 ZK_DATA_DIR=/var/lib/zookeeper/data \
 ZK_DATA_LOG_DIR=/var/lib/zookeeper/log \
@@ -12,6 +12,7 @@ COPY zookeeper-authors-keys .
 RUN set -x \
     && apt-get update \
     && apt-get install -y openjdk-8-jre-headless wget netcat-openbsd \
+    && apt install -y gpg-agent \
 	&& wget -q "https://archive.apache.org/dist/zookeeper/$ZK_DIST/$ZK_DIST.tar.gz" \
     && wget -q "https://archive.apache.org/dist/zookeeper/$ZK_DIST/$ZK_DIST.tar.gz.asc" \
     && export GNUPGHOME="$(mktemp -d)" \
